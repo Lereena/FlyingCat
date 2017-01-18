@@ -27,6 +27,7 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap planet = BitmapFactory.decodeResource(getResources(), R.drawable.planet2);
     private Sprite Cat;
     private Sprite enemyMonster;
+    private Sprite banana;
 
     private final int timerInterval = 30;
 
@@ -75,6 +76,15 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
+        Bitmap bonus = BitmapFactory.decodeResource(getResources(), R.drawable.banana);
+
+        w = bonus.getWidth();
+        h = bonus.getHeight();
+
+        firstFrame = new Rect(0, 0, w, h);
+
+        banana = new Sprite(2000, 250, -200, 0, firstFrame, bonus);
+
         DrawView.Timer t = new DrawView.Timer();
         t.start();
 
@@ -116,6 +126,7 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
     protected void update() {
         Cat.update(timerInterval);
         enemyMonster.update(timerInterval);
+        banana.update(timerInterval);
 
         if (Cat.getY() + Cat.getFrameHeight() > viewHeight) {
             Cat.setY(viewHeight - Cat.getFrameHeight());
@@ -134,12 +145,24 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
             ReturnEnemy();
             points-=40;
         }
+        if (banana.getX() < -banana.getFrameWidth()) {
+            ReturnBanana();
+        }
+        if (banana.intersect(Cat)) {
+            ReturnBanana();
+            points+=15;
+        }
         invalidate();
     }
 
     private void ReturnEnemy() {
         enemyMonster.setX(viewWidth + Math.random() * 500);
         enemyMonster.setY(Math.random() * (viewHeight - enemyMonster.getFrameHeight()));
+    }
+
+    private void ReturnBanana() {
+        banana.setX(viewWidth + Math.random() * 700);
+        banana.setY(Math.random() * (viewHeight - banana.getFrameHeight()));
     }
 
     class Timer extends CountDownTimer {
@@ -161,10 +184,10 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
         if (eventAction == MotionEvent.ACTION_DOWN) {
 
             if (event.getY() < Cat.getBoundingBoxRect().top) {
-                Cat.setVelocityY(-100);
+                Cat.setVelocityY(-200);
             }
             else if (event.getY() > Cat.getBoundingBoxRect().bottom) {
-                Cat.setVelocityY(100);
+                Cat.setVelocityY(200);
             }
         }
         return true;
@@ -193,6 +216,7 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
                         canvas.drawBitmap(planet, null, dstRect, null); // устанавливаем на фон картинку, вписывая в прямоугольник
                         Cat.draw(canvas); // отрисовываем кота
                         enemyMonster.draw(canvas); // отрисовываем врага
+                        banana.draw(canvas); // отрисовываем ещё какую-то ерунду
                         Paint point = new Paint();
                         point.setAntiAlias(true);
                         point.setColor(Color.BLUE);
