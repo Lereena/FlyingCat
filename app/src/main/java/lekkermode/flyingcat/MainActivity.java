@@ -8,14 +8,10 @@ import android.os.Bundle;
 
 public class MainActivity extends AppCompatActivity {
 
-    DrawView lvl1;
-    private final int timerInterval = 100;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        lvl1 = new DrawView(this);
         super.onCreate(savedInstanceState);
-        setContentView(lvl1);
+        setContentView(new DrawView(this));
      //   MainActivity.Timer t = new Timer();
       //  t.start();
     }

@@ -12,6 +12,10 @@ import android.os.CountDownTimer;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+
+import static lekkermode.flyingcat.R.drawable.planet2;
+import static lekkermode.flyingcat.R.drawable.planetlvl2;
+
 /**
  * Created by Alex on 18.01.2017.
  */
@@ -26,10 +30,13 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
 
     protected int points = 0;
 
-    private Bitmap planet = BitmapFactory.decodeResource(getResources(), R.drawable.planet2);
+    private Bitmap planet = BitmapFactory.decodeResource(getResources(), planet2);
+    private Bitmap planet2lvl = BitmapFactory.decodeResource(getResources(), planetlvl2);
+
     private Sprite Cat;
     private Sprite enemyMonster;
     private Sprite banana;
+    private Sprite tapmonster;
 
     private final int timerInterval = 30;
 
@@ -87,8 +94,21 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
 
         banana = new Sprite(2000, 250, -200, 0, firstFrame, bonus);
 
+
+        Bitmap tapenemy = BitmapFactory.decodeResource(getResources(), R.drawable.tapmonster);
+
+        w = tapenemy.getWidth();
+        h = tapenemy.getHeight();
+
+        firstFrame = new Rect(0, 0, w, h);
+
+        tapmonster = new Sprite(1000, 250, -400, 0, firstFrame, tapenemy);
+
+
         DrawView.DrawTimer t = new DrawView.DrawTimer();
         t.start();
+        DrawView.ActivityTimer a = new DrawView.ActivityTimer();
+        a.start();
 
     }
 
@@ -147,6 +167,14 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
             ReturnEnemy();
             points-=40;
         }
+        if (tapmonster.getX() < -tapmonster.getFrameWidth()) {
+                ReturnTapmonster();
+                points += 10;
+        }
+        if (tapmonster.intersect(Cat)) {
+                ReturnTapmonster();
+                points -= 70;
+        }
         if (banana.getX() < -banana.getFrameWidth()) {
             ReturnBanana();
         }
@@ -165,6 +193,11 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
     private void ReturnBanana() {
         banana.setX(viewWidth + Math.random() * 700);
         banana.setY(Math.random() * (viewHeight - banana.getFrameHeight()));
+    }
+
+    public void ReturnTapmonster() {
+        tapmonster.setX(viewWidth + Math.random() * 1000);
+        tapmonster.setY(Math.random() * (viewHeight - tapmonster.getFrameHeight()));
     }
 
     class DrawTimer extends CountDownTimer {
@@ -186,17 +219,30 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
 
         @Override
         public void onTick(long millisUntilFinished) {
-            if (points >= 30) {
-
+            if (points >= 300 && running) {
+                running2 = true;
+                points = 0;
+                running = false;
+            }
+            if (points >= 1200 && running2) {
+                theend = true;
+                running2 = false;
             }
         }
             @Override
             public void onFinish(){}
     }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int eventAction = event.getAction();
 
+        if (eventAction == MotionEvent.ACTION_DOWN && running2)  {
+            if (tapmonster.getBoundingBoxRect().contains((int) event.getX(), (int) event.getY())) {
+                ReturnTapmonster();
+                points+=30;
+            }
+        }
         if (eventAction == MotionEvent.ACTION_DOWN) {
 
             if (event.getY() < Cat.getBoundingBoxRect().top) {
@@ -211,17 +257,19 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
         return true;
     }
 
+    private volatile boolean running = true;
+    private volatile boolean running2 = false;
+    private volatile boolean theend = false;
+
     public class DrawThread extends Thread {
         private SurfaceHolder surfaceHolder;
-        private volatile boolean running = true;
-        private volatile boolean running2 = false;
 
         public DrawThread(Context context, SurfaceHolder surfaceHolder) {
             this.surfaceHolder = surfaceHolder;
         }
 
         public void requestStop(){
-            running = false;
+            theend = false;
         }
 
         @Override
@@ -255,10 +303,11 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
             }
             while (running2) {
                 Canvas canvas = surfaceHolder.lockCanvas();
+                tapmonster.update(timerInterval);
                 if (canvas != null) {
                     try {
                         Rect dstRect = new Rect(0, 0, canvas.getWidth(), canvas.getHeight()); // создаём прямоугольник по размерам экрана
-                        canvas.drawBitmap(planet, null, dstRect, null); // устанавливаем на фон картинку, вписывая в прямоугольник
+                        canvas.drawBitmap(planet2lvl, null, dstRect, null); // устанавливаем на фон картинку, вписывая в прямоугольник
                         Cat.draw(canvas); // отрисовываем кота
                         enemyMonster.draw(canvas); // отрисовываем врага
                         banana.draw(canvas); // отрисовываем ещё какую-то ерунду
@@ -267,12 +316,32 @@ public class DrawView extends SurfaceView implements SurfaceHolder.Callback {
                         point.setAntiAlias(true);
                         point.setColor(Color.BLUE);
                         point.setTextSize(80);
-                        canvas.drawText(points+"/1000", viewWidth/2, 90, point); // пишем количество очков
-                        canvas.drawText("points", viewWidth - 280, 180, point);
+                        canvas.drawText(points+"/1200", viewWidth/2, 90, point); // пишем количество очков
+                        canvas.drawText("points", viewWidth/2, 180, point);
                         Paint lvl = new Paint();
                         lvl.setTextSize(80);
-                        lvl.setColor(Color.CYAN);
-                        canvas.drawText("Level 2", viewWidth, 90, lvl); // пишем номер уровня
+                        lvl.setColor(Color.WHITE);
+                        canvas.drawText("Level 2", 0, 90, lvl); // пишем номер уровня
+                    }
+                    finally {
+                        surfaceHolder.unlockCanvasAndPost(canvas);
+                    }
+                }
+            }
+            while (theend) {
+                Canvas canvas = surfaceHolder.lockCanvas();
+                if (canvas != null) {
+                    try {
+                        canvas.drawARGB(255, 255, 255, 255);
+                        Paint end = new Paint();
+                        end.setColor(Color.BLUE);
+                        end.setTextSize(50);
+                        canvas.drawText("Молодец, ты прошёл всю игру!", 50, viewHeight / 3, end);
+                        canvas.drawText("Сожалею, что украл у тебя кое-что.", 50, viewHeight / 3 + 90, end);
+                        canvas.drawText("Несколько минут твоего времени))0)", 50, viewHeight / 3 + 180, end);
+                    }
+                    finally {
+                        surfaceHolder.unlockCanvasAndPost(canvas);
                     }
                 }
             }
